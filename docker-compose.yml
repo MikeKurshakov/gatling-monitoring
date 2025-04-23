@@ -139,6 +139,21 @@ services:
       &&
       echo 'Exiting'
       "
-      
+  logstash:
+    image: docker.elastic.co/logstash/logstash-oss:8.11.3
+    container_name: logstash
+    restart: always
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./logstash/output:/usr/share/logstash/output
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      - monitoring
+
 networks:
   monitoring:
