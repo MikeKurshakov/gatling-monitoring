@@ -1,0 +1,144 @@
+version: '3.8'
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: always
+    ports:
+      - '8089:8089'
+    volumes:
+      - ./nginx/default.local.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      telegraf:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8089/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - monitoring
+  telegraf:
+    image: telegraf
+    container_name: telegraf
+    restart: always
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ./telegraf/inputs.influxdb_listener.8087.x2i_gatling.conf:/etc/telegraf/telegraf.d/inputs.influxdb_listener.8087.x2i_gatling.conf:ro
+      - ./telegraf/outputs.kafka.conf:/etc/telegraf/telegraf.d/outputs.kafka.conf:ro
+      - type: bind
+        source: ./results/metrics.log
+        target: /tmp/metrics.log
+    depends_on:
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    ports:
+      - '8088:8088'
+    networks:
+      - monitoring
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_SERVERS: zookeeper:2888:3888
+      ZOOKEEPER_4LW_COMMANDS_WHITELIST: "ruok,conf,envi,stat"
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181", "|", "grep", "imok"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - monitoring
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    restart: always
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_BROKER_ID: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: ${DOCKER_HOST_IP:-127.0.0.1}
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "9999:9999"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - monitoring
+  gatling-monitoring:
+    image: maven:3.9.9-amazoncorretto-21-debian
+    cpu_count: 1
+    cpuset: "5-7"
+    mem_reservation: 256m
+    mem_limit: 512m
+    depends_on:
+      telegraf:
+        condition: service_healthy
+      zookeeper:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    volumes:
+      - "./gatling-gradle-plugin-demo-java-perftest-run.jar:/tmp/gatling/gatling-gradle-plugin-demo-java-perftest-run.jar:ro"
+      - "./results:/tmp/gatling/results"
+      - "./volumes/gatling/repository:/root/.m2/repository"
+      - "./x2i:/tools/x2i:ro"
+      - "./volumes/gatling/io.netty.native.workdir:/io.netty.native.workdir"
+      - "./volumes/gatling/jansi.tmpdir:/jansi.tmpdir"
+      - "./volumes/gatling/monitoring:/tmp/target/load-test-results"
+    tmpfs:
+      - /tmp
+    working_dir: /tmp/gatling
+    restart: "no"
+    networks:
+      - monitoring
+    command: bash -x -c "
+      echo 'Starting x2i in detached mode, saving PID in variable' &&
+      export x2iPID=$$(/tools/x2i/x2i
+      ./results --address http://nginx:8089
+      --system-under-test monitoring --test-environment local --stop-timeout 90
+      --database x2i_gatling --password password --username x2i_gatling
+      -d | awk '{print $$2}')
+      &&
+      echo 'Build and execute test' &&
+      java -jar gatling-gradle-plugin-demo-java-perftest-run -s computerdatabase.ComputerDatabaseSimulation
+      &&
+      echo 'Waiting for parser to safely finish all its work' &&
+      sleep 30
+      &&
+      echo 'Sending interrupt signal to x2i process' &&
+      kill -INT $$x2iPID
+      &&
+      echo 'Waiting for process to stop safely' &&
+      sleep 30
+      &&
+      echo 'Exiting'
+      "
+      
+networks:
+  monitoring:

@@ -1,0 +1,77 @@
+## Bitnami Kafka Helm chart values for KRaft mode (no Zookeeper)
+## This configuration uses KRaft mode which eliminates the Zookeeper dependency
+
+## Global values
+global:
+  storageClass: ""
+
+## Kafka specific configuration
+kraft:
+  enabled: true
+  clusterId: kafka-cluster-id
+
+## Replication settings
+replicaCount: 1
+
+## Persistence configuration
+persistence:
+  enabled: true
+  size: 8Gi
+
+## Network settings
+service:
+  type: NodePort
+  nodePorts:
+    client: 30093
+
+## Security settings - explicitly disable all authentication
+auth:
+  clientProtocol: plaintext
+  interBrokerProtocol: plaintext
+  tls:
+    enabled: false
+  sasl:
+    enabled: false
+  jksCerts:
+    enabled: false
+  autoGenCerts: false
+  zookeeper:
+    auth:
+      enabled: false
+  jaas:
+    existingSecret: ""
+    zookeeperUser: ""
+    zookeeperPassword: ""
+
+## Kafka configuration
+extraConfig: |-
+  auto.create.topics.enable=true
+  offsets.topic.replication.factor=1
+  transaction.state.log.replication.factor=1
+  transaction.state.log.min.isr=1
+  log.retention.hours=24
+  connections.max.idle.ms=60000
+
+## Topic creation
+autoCreateTopicsEnable: true
+defaultReplicationFactor: 1
+
+## Predefined topics
+topics:
+  - name: telegraf
+    partitions: 1
+    replicationFactor: 1
+    config:
+      max.message.bytes: 10000000
+
+## Resources
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 250m
+  limits:
+    memory: 1Gi
+    cpu: 500m
+
+## JVM settings
+heapOpts: "-Xms256m -Xmx512m"
