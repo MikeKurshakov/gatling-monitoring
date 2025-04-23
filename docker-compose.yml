@@ -126,7 +126,7 @@ services:
       -d | awk '{print $$2}')
       &&
       echo 'Build and execute test' &&
-      java -jar gatling-gradle-plugin-demo-java-perftest-run -s computerdatabase.ComputerDatabaseSimulation
+      java -jar gatling-gradle-plugin-demo-java-perftest-run.jar -s computerdatabase.ComputerDatabaseSimulation
       &&
       echo 'Waiting for parser to safely finish all its work' &&
       sleep 30
