@@ -92,6 +92,7 @@ services:
       - monitoring
   gatling-monitoring:
     image: maven:3.9.9-amazoncorretto-21-debian
+    container_name: gatling-monitoring
     cpu_count: 1
     cpuset: "5-7"
     mem_reservation: 256m
@@ -140,7 +141,7 @@ services:
       echo 'Exiting'
       "
   logstash:
-    image: docker.elastic.co/logstash/logstash-oss:8.11.3
+    image: opensearchproject/logstash-oss-with-opensearch-output-plugin:8.9.0
     container_name: logstash
     restart: always
     depends_on:
@@ -151,9 +152,14 @@ services:
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
       - ./logstash/output:/usr/share/logstash/output
     environment:
-      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      LS_JAVA_OPTS: "-Xmx512m -Xms512m"
+    mem_limit: 1g
+    mem_reservation: 512m
     networks:
       - monitoring
+      - opensearch_opensearch-net
 
 networks:
   monitoring:
+  opensearch_opensearch-net:
+    external: true
