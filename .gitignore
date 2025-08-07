@@ -1,2 +1,7 @@
+# Docker volumes
+volumes/*
+
+# Results files
+
 results/*
 logstash/output/*

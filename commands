@@ -1,3 +1,0 @@
-.\x2i.exe C:\MyFiles\Gatling\Project\gatling-taurus-3-8-4-gradle\gatling-gradle-plugin-demo-java\build\reports\gatling -i gatling_1 -d -b gatling -y MyCustomSystem -t MyCustomEnv
-
-java -jar performance-tests-pack.jar -s computerdatabase.ComputerDatabaseSimulation

@@ -1,0 +1,46 @@
+{
+  "index_patterns": ["performance-metrics-users*"],
+  "data_stream": {},
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "index.plugins.index_state_management.policy_id": "performance-metrics-policy"
+    },
+    "mappings": {
+      "dynamic": "true",
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "@relativeTimestamp": {
+          "type": "date"
+        },
+        "active": {
+          "type": "integer"
+        },
+        "runId": {
+          "type": "integer"
+        },
+        "testEnvironment": {
+          "type": "keyword"
+        },
+        "systemUnderTest": {
+          "type": "keyword"
+        },
+        "runName": {
+          "type": "keyword"
+        },
+        "host": {
+          "type": "keyword"
+        },
+        "nodeName": {
+          "type": "keyword"
+        },
+        "scenario": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

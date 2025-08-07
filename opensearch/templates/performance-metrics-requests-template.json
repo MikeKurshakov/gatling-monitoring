@@ -1,0 +1,61 @@
+{
+  "index_patterns": ["performance-metrics-requests*"],
+  "data_stream": {},
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "index.plugins.index_state_management.policy_id": "performance-metrics-policy"
+    },
+    "mappings": {
+      "dynamic": "true",
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "@relativeTimestamp": {
+          "type": "date"
+        },
+        "duration": {
+          "type": "integer"
+        },
+        "runId": {
+          "type": "integer"
+        },
+        "result": {
+          "type": "keyword"
+        },
+        "testEnvironment": {
+          "type": "keyword"
+        },
+        "systemUnderTest": {
+          "type": "keyword"
+        },
+        "runName": {
+          "type": "keyword"
+        },
+        "simulation": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "keyword"
+        },
+        "host": {
+          "type": "keyword"
+        },
+        "nodeName": {
+          "type": "keyword"
+        },
+        "errorMessage": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  }
+}
